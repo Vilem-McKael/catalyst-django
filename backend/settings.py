@@ -71,6 +71,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://catalyst.herokuapp.com',
+    'https://zippy-cranachan-baf821.netlify.app',
 ]
 
 ALLOWED_HOSTS = ['catalyst.herokuapp.com', '127.0.0.1:8000', '127.0.0.1:5173', 'localhost']
