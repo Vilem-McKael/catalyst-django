@@ -9,9 +9,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, APIView
 
 
-from .models import Post, Collectiv, Comment
+from .models import Post, Collective, Comment
 from accounts.models import User
-from .serializers import PostSerializer, CollectivSerializer, CommentSerializer
+from .serializers import PostSerializer, CollectiveSerializer, CommentSerializer
 
 # Create your views here.
 
@@ -45,10 +45,10 @@ class PostListCreateView(APIView):
 
         print('data: ', request.data)
 
-        collectiv = Collectiv.objects.get(id=data['collectiv_id'])
+        collective = Collective.objects.get(id=data['collective_id'])
         user = User.objects.get(id=data['user'])
 
-        data['collectiv'] = collectiv.id
+        data['collective'] = collective.id
         print(user.username)
         data['username'] = user.username
 
@@ -95,6 +95,8 @@ class PostRetrieveUpdateDeleteView(APIView):
 
         serializer = self.serializer_class(instance=post, data=data)
 
+        print(serializer)
+
         if serializer.is_valid():
             serializer.save()
 
@@ -111,7 +113,7 @@ class PostRetrieveUpdateDeleteView(APIView):
 
         post.delete()
 
-        return Response(data={"message": "Post deleted"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
 """
     COMMENT VIEW FUNCTIONS
@@ -119,26 +121,26 @@ class PostRetrieveUpdateDeleteView(APIView):
 
 
 """
-    COLLECTIV VIEW FUNCTIONS
+    COLLECTIVE VIEW FUNCTIONS
 """
 
-class CollectivListCreateView(APIView):
+class CollectiveListCreateView(APIView):
 
-    serializer_class = CollectivSerializer
+    serializer_class = CollectiveSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    # GET ALL COLLECTIVS AT /collectivs/ 'GET'
+    # GET ALL COLLECTIVES AT /collectives/ 'GET'
     def get(self, request:Request, *args, **kwargs):
-        collectivs = Collectiv.objects.all()
+        collectives = Collective.objects.all()
 
-        serializer=self.serializer_class(instance=collectivs, many=True)
+        serializer=self.serializer_class(instance=collectives, many=True)
 
         print(serializer.data)
 
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
-    # ADD A NEW COLLECTIV AT /collectivs/ 'POST'
+    # ADD A NEW COLLECTIVE AT /collectives/ 'POST'
     def post(self, request:Request, *args, **kwargs):
         data = request.data
 
@@ -161,7 +163,7 @@ class CollectivListCreateView(APIView):
             serializer.save()
 
             response = {
-                "message": "Collectiv Created",
+                "message": "Collective Created",
                 "data": serializer.data
             }
 
@@ -170,51 +172,51 @@ class CollectivListCreateView(APIView):
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class CollectivRetrieveUpdateDeleteView(APIView):
+class CollectiveRetrieveUpdateDeleteView(APIView):
 
-    serializer_class = CollectivSerializer
+    serializer_class = CollectiveSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request:Request, collectiv_id:int):
-        collectiv = get_object_or_404(Collectiv, pk=collectiv_id)
+    def get(self, request:Request, collective_id:int):
+        collective = get_object_or_404(Collective, pk=collective_id)
 
-        serializer = self.serializer_class(instance=collectiv)
+        serializer = self.serializer_class(instance=collective)
 
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
-    def put(self, request:Request, collectiv_id:int):
-        collectiv = get_object_or_404(Collectiv, pk=collectiv_id)
+    def put(self, request:Request, collective_id:int):
+        collective = get_object_or_404(Collective, pk=collective_id)
 
         data = request.data
 
-        serializer = self.serializer_class(instance=collectiv, data=data)
+        serializer = self.serializer_class(instance=collective, data=data)
 
         if serializer.is_valid():
             serializer.save()
 
             response = {
-                "message": "Collectiv updated",
+                "message": "Collective updated",
                 "data": serializer.data
             }
             return Response(data=response, status=status.HTTP_200_OK)
         
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request:Request, collectiv_id:int):
-        post = get_object_or_404(Collectiv, pk=collectiv_id)
+    def delete(self, request:Request, collective_id:int):
+        post = get_object_or_404(Collective, pk=collective_id)
 
         post.delete()
 
-        return Response(data={"message": "Collectiv deleted"}, status=status.HTTP_204_NO_CONTENT)
+        return Response(data={"message": "Collective deleted"}, status=status.HTTP_204_NO_CONTENT)
     
 @api_view(http_method_names=['GET'])
-def get_posts_by_collectiv(request:Request, collectiv_id:int):
+def get_posts_by_collective(request:Request, collective_id:int):
 
     # returns a 404 error if the object is not found
-    collectiv = get_object_or_404(Collectiv, pk=collectiv_id)
+    collective = get_object_or_404(Collective, pk=collective_id)
 
-    posts = collectiv.post_set.all()
+    posts = collective.post_set.all()
 
     serializer = PostSerializer(many=True, instance=posts)
 
@@ -227,18 +229,18 @@ def get_posts_by_collectiv(request:Request, collectiv_id:int):
     return Response(data=response, status=status.HTTP_200_OK)
 
 
-# Collectiv Search
+# Collective Search
 @api_view(http_method_names=['POST'])
-def search_for_collectiv(request:Request):
+def search_for_collective(request:Request):
 
     search_terms = request.data['search']
 
     print(search_terms)
 
 
-    matching_collectivs = Collectiv.objects.filter(name__icontains=search_terms)
+    matching_collectives = Collective.objects.filter(name__icontains=search_terms)
 
-    serializer = CollectivSerializer(many=True, instance=matching_collectivs)
+    serializer = CollectiveSerializer(many=True, instance=matching_collectives)
 
     response = {
         "message":"post",
@@ -249,58 +251,38 @@ def search_for_collectiv(request:Request):
     return Response(data=response, status=status.HTTP_200_OK)
     
 
-# Join a Collectiv
+# Join a Collective
 @api_view(http_method_names=['POST'])
-def join_collectiv(request:Request):
+def join_collective(request:Request):
 
     data = request.data
 
-    collectiv = Collectiv.objects.get(id=data['collectiv'])
+    collective = Collective.objects.get(id=data['collective'])
     user = User.objects.get(id=data['user'])
 
-    collectiv.members.add(user)
+    collective.members.add(user)
 
     response = {
-        "message":"Successfully joined collectiv",
+        "message":"Successfully joined collective",
     }
 
-    return Response(data={'message': 'workin on it'}, status=status.HTTP_200_OK)
+    return Response(data={'message': 'Successfully joined collective'}, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['POST'])
-def get_user_collectivs(request:Request):
+def get_user_collectives(request:Request):
 
     data = request.data
 
     user = User.objects.get(id=data['user'])
 
-    collectivs = user.collectiv_set.all()
+    collectives = user.collective_set.all()
 
-    serializer = CollectivSerializer(many=True, instance=collectivs)
+    serializer = CollectiveSerializer(many=True, instance=collectives)
 
     response = {
-        "message":"Successfully joined collectiv",
+        "message":"Successfully joined collective",
         "data": serializer.data
     }
 
     return Response(data=response, status=status.HTTP_200_OK)
-
-"""
-    CHANGE THIS TO GET USER POSTS
-"""
-
-# @api_view(http_method_names=['GET'])
-# def post_detail(request:Request, post_id:int):
-
-#     # returns a 404 error if the object is not found
-#     post = get_object_or_404(Post, pk=post_id)
-
-#     serializer = PostSerializer(instance=post)
-
-#     response = {
-#         "message":"post",
-#         "data": serializer.data
-#     }
-
-#     # this will only run if the object has been found
-#     return Response(data=response, status=status.HTTP_200_OK)

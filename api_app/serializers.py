@@ -1,12 +1,12 @@
 from rest_framework import serializers
-from .models import Post, Collectiv, Comment
+from .models import Post, Collective, Comment
 
-class CollectivSerializer(serializers.ModelSerializer):
+class CollectiveSerializer(serializers.ModelSerializer):
 
     name = serializers.CharField(max_length=100)
     
     class Meta:
-        model = Collectiv
+        model = Collective
         fields = '__all__'
         # ['id', 'name', 'description', 'created', 'members', 'private']
 
