@@ -10,6 +10,7 @@ urlpatterns = [
     path('collectives/search/', views.search_for_collective, name="collective_search"),
     path('collectives/join/', views.join_collective, name="join_collective"),
     path('collectives/user/', views.get_user_collectives, name="user_collectives"),
-    path('comments/', views.PostListCreateView.as_view(), name='posts_list_create'),
-    path('posts/<int:comment_id>/', views.PostRetrieveUpdateDeleteView.as_view(), name="post_detail"),
+    path('posts/<int:post_id>/add_image/', views.add_image, name="add_image"),
+    # path('comments/', views.PostListCreateView.as_view(), name='posts_list_create'),
+    # path('posts/<int:comment_id>/', views.PostRetrieveUpdateDeleteView.as_view(), name="post_detail"),
 ]

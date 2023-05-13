@@ -1,6 +1,10 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user
 
+import os
+import uuid
+import boto3
+
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -8,10 +12,9 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, APIView
 
-
-from .models import Post, Collective, Comment
+from .models import Post, Collective, Image, Event
 from accounts.models import User
-from .serializers import PostSerializer, CollectiveSerializer, CommentSerializer
+from .serializers import PostSerializer, CollectiveSerializer, ImageSerializer
 
 # Create your views here.
 
@@ -52,6 +55,8 @@ class PostListCreateView(APIView):
         print(user.username)
         data['username'] = user.username
 
+        del data['collective_id']
+
         # self.serializer_class was defined to be PostSerializer at the top of our class view
         serializer = self.serializer_class(data=data)
 
@@ -71,6 +76,7 @@ class PostListCreateView(APIView):
 
             return Response(data=response, status=status.HTTP_201_CREATED)
         
+        print(serializer)
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
@@ -115,10 +121,6 @@ class PostRetrieveUpdateDeleteView(APIView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-"""
-    COMMENT VIEW FUNCTIONS
-"""
-
 
 """
     COLLECTIVE VIEW FUNCTIONS
@@ -210,6 +212,94 @@ class CollectiveRetrieveUpdateDeleteView(APIView):
 
         return Response(data={"message": "Collective deleted"}, status=status.HTTP_204_NO_CONTENT)
     
+"""
+    IMAGE VIEW FUNCTIONS
+"""
+
+@api_view(http_method_names=['POST'])
+def add_image(request:Request, post_id):
+
+    image_file = request.FILES.get('image-file', None)
+
+    print(image_file)
+
+    if image_file:
+        s3 = boto3.client('s3')
+        
+        key = uuid.uuid4().hex[:6] + image_file.name[image_file.name.rfind('.'):]
+
+        try:
+            bucket = os.environ['S3_BUCKET']
+            s3.upload_fileobj(image_file, bucket, key)
+            url = f"{os.environ['S3_BASE_URL']}{bucket}/{key}"
+            post = Post.objects.get(id=post_id)
+            collective = Collective.objects.get(id=post.collective.id)
+            image = Image.objects.create(url=url, post=post, collective=collective)
+
+            serializer =  ImageSerializer(instance=image, many=False)
+
+            response = {
+                "message": "Image successfully created",
+                "image": serializer.data,
+            }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print('An error occurred uploading file to S3')
+            print(e)
+        
+        return Response(data={"message": "An error occurred uploading file to S3"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(data={"message": "An error occurred uploading file to S3"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+class ImageListCreateView(APIView):
+
+    serializer_class = ImageSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request:Request, *args, **kwargs):
+        collectives = Collective.objects.all()
+
+        serializer=self.serializer_class(instance=collectives, many=True)
+
+        print(serializer.data)
+
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    # ADD A NEW COLLECTIVE AT /collectives/ 'POST'
+    def post(self, request:Request, *args, **kwargs):
+        data = request.data
+
+        # user = User.objects.filter(id=id)[0]
+
+        user = User.objects.get(username=request.user).id
+
+
+        data['members'] = [user]
+
+        # print('first print ', request.data, user)
+
+        serializer = self.serializer_class(data=data)
+        # serializer.members.add(user)
+
+        print('serializer', serializer)
+
+        if serializer.is_valid():
+
+            serializer.save()
+
+            response = {
+                "message": "Collective Created",
+                "data": serializer.data
+            }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
+        
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(http_method_names=['GET'])
 def get_posts_by_collective(request:Request, collective_id:int):
 
@@ -217,16 +307,38 @@ def get_posts_by_collective(request:Request, collective_id:int):
     collective = get_object_or_404(Collective, pk=collective_id)
 
     posts = collective.post_set.all()
+    images = collective.image_set.all()
 
-    serializer = PostSerializer(many=True, instance=posts)
 
-    response = {
-        "message":"post",
-        "data": serializer.data
-    }
+    if len(posts):
+        pserializer = PostSerializer(many=True, instance=posts)
+        iserializer = ImageSerializer(many=True, instance=images)
+
+        response = {
+            "message":"Posts retrieved",
+            "data": {
+                "posts": pserializer.data,
+                "images": iserializer.data
+            }
+        }
+
+        return Response(data=response, status=status.HTTP_200_OK)
+
+    else:
+        response = {
+            "message": "No posts found",
+            "data": {
+                "posts": pserializer.data,
+                "images": iserializer.data
+            }
+        }
+
+        return Response(data=response, status=status.HTTP_200_OK)
+
+    
 
     # this will only run if the object has been found
-    return Response(data=response, status=status.HTTP_200_OK)
+    
 
 
 # Collective Search
