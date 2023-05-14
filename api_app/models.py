@@ -22,7 +22,7 @@ class Post(models.Model):
     # image = models.ForeignKey(Image, on_delete=models.SET_DEFAULT, default=None, null=True)
 
     def __str__(self):
-        return f"{self.title}: created {self.created}"
+        return f"{self.content}: created {self.created}"
     
 class Image(models.Model):
     url = models.CharField(max_length=500)
