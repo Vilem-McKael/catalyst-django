@@ -328,9 +328,10 @@ def get_posts_by_collective(request:Request, collective_id:int):
         response = {
             "message": "No posts found",
             "data": {
-                "posts": pserializer.data,
-                "images": iserializer.data
+                "posts": [],
+                "images": [],
             }
+            
         }
 
         return Response(data=response, status=status.HTTP_200_OK)
@@ -368,6 +369,8 @@ def search_for_collective(request:Request):
 def join_collective(request:Request):
 
     data = request.data
+
+    print(request.data)
 
     collective = Collective.objects.get(id=data['collective'])
     user = User.objects.get(id=data['user'])
